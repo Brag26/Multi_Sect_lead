@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeadFinder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+  :root {
+    --bg: #f5f6f4; --panel: #ffffff; --ink: #14201b; --muted: #5d6b64; --line: #dfe4e0;
+    --accent: #0b6b57; --accent-ink: #ffffff; --warn: #a15c00; --bad: #b3261e; --good: #1b7a3d;
+    --display: 'Fraunces', Georgia, serif; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0f1613; --panel: #172019; --ink: #e8efeb; --muted: #93a39a; --line: #263229;
+    --accent: #4fc3a1; --accent-ink: #072018; --warn: #e0a03a; --bad: #ff8a80; --good: #6fd08c; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #0f1613; --panel: #172019; --ink: #e8efeb; --muted: #93a39a; --line: #263229;
+    --accent: #4fc3a1; --accent-ink: #072018; --warn: #e0a03a; --bad: #ff8a80; --good: #6fd08c; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font: 600 34px/1.1 var(--display); margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 0 0 20px; max-width: 60ch; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  .tab { background: none; border: 0; padding: 10px 14px; font: 500 15px var(--body); color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab[aria-selected="true"] { color: var(--ink); border-color: var(--accent); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-items: end; }
+  label { display: grid; gap: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  input, select, textarea { font: 15px var(--body); padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); width: 100%; text-transform: none; letter-spacing: 0; }
+  input:focus-visible, select:focus-visible, button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 6px; padding: 10px 16px; font: 600 15px var(--body); cursor: pointer; }
+  button.primary:disabled { opacity: .6; cursor: wait; }
+  button.ghost { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 6px; padding: 8px 12px; font: 500 14px var(--body); cursor: pointer; }
+  .sources { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+  .chip { font: 12px var(--mono); padding: 3px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+  .chip.on { color: var(--good); border-color: var(--good); }
+  .chip.err { color: var(--bad); border-color: var(--bad); }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 20px 0 10px; }
+  .count { font: 600 20px var(--display); }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  td.name { font-weight: 600; min-width: 180px; }
+  td small { display: block; color: var(--muted); font: 12px var(--mono); }
+  a { color: var(--accent); }
+  .note { color: var(--muted); font-size: 13px; margin-top: 12px; }
+  .msg { padding: 12px; border-radius: 6px; margin-top: 14px; border: 1px solid var(--line); }
+  .msg.bad { color: var(--bad); border-color: var(--bad); }
+  .msg.good { color: var(--good); border-color: var(--good); }
+  .consent { display: flex; gap: 10px; align-items: flex-start; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--ink); }
+  .consent input { width: auto; margin-top: 4px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>LeadFinder</h1>
+  <p class="sub">Find businesses in any sector, in any country, from every source you have connected. Capture consumer leads with consent.</p>
+
+  <form class="panel" id="login" hidden>
+    <div class="grid">
+      <label>Password<input id="pw" type="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit">Unlock</button>
+    </div>
+    <div id="loginMsg" class="note"></div>
+  </form>
+  <div id="notice"></div>
+
+  <div id="app" hidden>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t1" aria-selected="true" data-tab="biz">Find businesses</button>
+    <button class="tab" role="tab" id="t2" aria-selected="false" data-tab="con">Consumer leads</button>
+  </div>
+
+  <section id="biz">
+    <form class="panel" id="searchForm">
+      <div class="grid">
+        <label>Sector
+          <select id="sector"></select>
+        </label>
+        <label>Or type any sector
+          <input id="custom" placeholder="e.g. veterinary, solar installer">
+        </label>
+        <label>Country
+          <input id="country" placeholder="India" value="India" required>
+        </label>
+        <label>City or area (optional)
+          <input id="city" placeholder="Chennai">
+        </label>
+        <label>Max results
+          <select id="limit"><option>25</option><option selected>50</option><option>100</option><option>200</option></select>
+        </label>
+        <button class="primary" id="go" type="submit">Search all sources</button>
+      </div>
+      <div class="sources" id="sources" aria-label="Connected sources"></div>
+    </form>
+    <div id="out"></div>
+  </section>
+
+  <section id="con" hidden>
+    <form class="panel" id="leadForm">
+      <div class="grid">
+        <label>Full name<input id="cName" required></label>
+        <label>Email<input id="cEmail" type="email"></label>
+        <label>Phone<input id="cPhone" type="tel"></label>
+        <label>Country<input id="cCountry"></label>
+        <label>Interested in<input id="cInterest" placeholder="e.g. buying a flat"></label>
+      </div>
+      <label class="consent" style="margin-top:14px"><input type="checkbox" id="cConsent">
+        <span id="consentText">I agree that my details may be stored and used to contact me about the service I asked for. I can ask for them to be deleted at any time.</span></label>
+      <div style="margin-top:14px"><button class="primary" type="submit">Save lead</button></div>
+      <div id="cMsg"></div>
+    </form>
+    <div class="bar"><div class="count" id="cCount">0 consumer leads</div><button class="ghost" id="cExport">Export CSV</button></div>
+    <div class="scroll"><table><thead><tr><th>Name</th><th>Contact</th><th>Interest</th><th>Consented</th><th></th></tr></thead><tbody id="cRows"></tbody></table></div>
+  </section>
+
+  </div>
+
+  <p class="note">Business listings come from public and licensed sources. Consumer leads are stored only when the person gives consent, and can be deleted individually.</p>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let leads = [];
+
+document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', t === b));
+  $('biz').hidden = b.dataset.tab !== 'biz';
+  $('con').hidden = b.dataset.tab !== 'con';
+  if (b.dataset.tab === 'con') loadConsumers();
+}));
+
+let pw = '';
+try { pw = sessionStorage.getItem('lf_pw') || ''; } catch (_) {}
+function api(path, opts = {}) {
+  return fetch(path, { ...opts, headers: { ...(opts.headers || {}), 'x-app-password': pw } })
+    .then((r) => { if (r.status === 401) showLogin(); return r; });
+}
+function showLogin(bad) {
+  $('app').hidden = true; $('login').hidden = false;
+  $('loginMsg').textContent = bad ? 'Wrong password.' : '';
+}
+async function boot() {
+  const c = await (await api('/api/config')).json();
+  if (c.authRequired && !c.authed) return showLogin(!!pw);
+  $('login').hidden = true; $('app').hidden = false;
+  const notes = [];
+  if (c.warning) notes.push(c.warning);
+  if (c.storage === false) notes.push('Consumer lead storage is not connected. Add Upstash Redis in Vercel Storage and redeploy.');
+  $('notice').innerHTML = notes.map((n) => `<div class="msg bad" style="margin:0 0 14px">${esc(n)}</div>`).join('');
+  $('sector').innerHTML = c.sectors.map((s) => `<option>${esc(s)}</option>`).join('');
+  $('sources').innerHTML = Object.entries(c.sources).map(([k, on]) => `<span class="chip ${on ? 'on' : ''}">${esc(k)}: ${on ? 'connected' : 'add key'}</span>`).join('');
+}
+$('login').addEventListener('submit', (e) => {
+  e.preventDefault(); pw = $('pw').value;
+  try { sessionStorage.setItem('lf_pw', pw); } catch (_) {}
+  boot();
+});
+boot();
+
+function csv(rows, cols) {
+  const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  return [cols.map((c) => q(c[1])).join(','), ...rows.map((r) => cols.map((c) => q(r[c[0]])).join(','))].join('\n');
+}
+function download(name, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
+  a.download = name; a.click();
+}
+
+$('searchForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const sector = $('custom').value.trim() || $('sector').value;
+  const p = new URLSearchParams({ sector, country: $('country').value, city: $('city').value, limit: $('limit').value });
+  $('go').disabled = true; $('go').textContent = 'Searching...';
+  $('out').innerHTML = '';
+  try {
+    const r = await (await api('/api/search?' + p)).json();
+    if (r.error) throw new Error(r.error);
+    leads = r.leads;
+    const st = Object.entries(r.status).map(([k, v]) => `<span class="chip ${v.ok ? 'on' : 'err'}" title="${esc(v.error || '')}">${esc(k)}: ${v.ok ? v.count : 'failed'}</span>`).join('');
+    $('out').innerHTML = `
+      <div class="bar"><div class="count">${leads.length} leads in ${esc(r.place.split(',').slice(0, 2).join(','))}</div>
+      <button class="ghost" id="exp">Export CSV</button></div>
+      <div class="sources" style="margin:0 0 12px">${st}</div>
+      <div class="scroll"><table><thead><tr><th>Business</th><th>Contact</th><th>Address</th><th>Rating</th><th>Source</th></tr></thead><tbody>
+      ${leads.map((l) => `<tr>
+        <td class="name">${esc(l.name)}</td>
+        <td>${l.phone ? esc(l.phone) + '<br>' : ''}${l.email ? esc(l.email) + '<br>' : ''}${l.website ? `<a href="${esc(/^https?:/.test(l.website) ? l.website : 'https://' + l.website)}" target="_blank" rel="noopener">${esc(l.website.replace(/^https?:\/\/(www\.)?/, '').slice(0, 32))}</a>` : ''}${!l.phone && !l.email && !l.website ? '<small>no contact listed</small>' : ''}</td>
+        <td>${esc(l.address) || '<small>not listed</small>'}</td>
+        <td>${esc(l.rating)}</td>
+        <td><small>${esc(l.source)}</small>${l.mapsUrl ? `<small><a href="${esc(l.mapsUrl)}" target="_blank" rel="noopener">view</a></small>` : ''}</td></tr>`).join('') || '<tr><td colspan="5">No results. Try a wider area or another sector.</td></tr>'}
+      </tbody></table></div>`;
+    const exp = $('exp');
+    if (exp) exp.onclick = () => download(`leads-${sector.replace(/\W+/g, '-')}.csv`, csv(leads, [['name', 'Name'], ['sector', 'Sector'], ['phone', 'Phone'], ['email', 'Email'], ['website', 'Website'], ['address', 'Address'], ['rating', 'Rating'], ['source', 'Source'], ['mapsUrl', 'Link']]));
+  } catch (err) {
+    $('out').innerHTML = `<div class="msg bad">${esc(err.message)}</div>`;
+  }
+  $('go').disabled = false; $('go').textContent = 'Search all sources';
+});
+
+// ---- consumer leads ----
+let consumers = [];
+async function loadConsumers() {
+  const lr = await api('/api/leads');
+  const lj = await lr.json();
+  if (!lr.ok) { $('cMsg').innerHTML = `<div class="msg bad">${esc(lj.error || 'Could not load leads.')}</div>`; return; }
+  consumers = lj;
+  $('cCount').textContent = `${consumers.length} consumer lead${consumers.length === 1 ? '' : 's'}`;
+  $('cRows').innerHTML = consumers.map((l) => `<tr><td class="name">${esc(l.name)}<small>${esc(l.country)}</small></td>
+    <td>${esc(l.email)}<br>${esc(l.phone)}</td><td>${esc(l.interest)}</td>
+    <td><small>${esc(l.createdAt.slice(0, 10))}</small></td>
+    <td><button class="ghost" data-del="${l.id}">Delete</button></td></tr>`).join('') || '<tr><td colspan="5">No consumer leads yet.</td></tr>';
+}
+$('cRows').addEventListener('click', async (e) => {
+  const id = e.target.dataset.del;
+  if (id) { await api('/api/leads?id=' + encodeURIComponent(id), { method: 'DELETE' }); loadConsumers(); }
+});
+$('leadForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = { name: $('cName').value, email: $('cEmail').value, phone: $('cPhone').value, country: $('cCountry').value, interest: $('cInterest').value, consent: $('cConsent').checked, consentText: $('consentText').textContent };
+  const r = await api('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json();
+  $('cMsg').innerHTML = r.ok ? '<div class="msg good">Lead saved.</div>' : `<div class="msg bad">${esc(j.error)}</div>`;
+  if (r.ok) { $('leadForm').reset(); loadConsumers(); }
+});
+$('cExport').onclick = () => download('consumer-leads.csv', csv(consumers, [['name', 'Name'], ['email', 'Email'], ['phone', 'Phone'], ['country', 'Country'], ['interest', 'Interest'], ['createdAt', 'Consented at']]));
+</script>
+</body>
+</html>
